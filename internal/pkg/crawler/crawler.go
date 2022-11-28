@@ -1,10 +1,10 @@
-package twitter
+package crawler
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"headless/internal/pkg/colorLog"
 	"regexp"
 	"sort"
 	"strings"
@@ -13,6 +13,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/kb"
 )
 
 var options = []chromedp.ExecAllocatorOption{
@@ -24,15 +25,7 @@ var options = []chromedp.ExecAllocatorOption{
 	chromedp.DisableGPU,
 }
 
-func defineRequestNameByPlatforms(url string) string {
-	if strings.Contains(url, "twitter.com") {
-		return "TweetDetail"
-	}
-	return "XXXXXXX"
-}
-
 func RunCrowler(url string) ([]map[string]interface{}, error) {
-	// url := `https://twitter.com/i/status/1273993946406907904`
 	channel := make(chan bool)
 	var responseBody string
 	var err error
@@ -44,19 +37,46 @@ func RunCrowler(url string) ([]map[string]interface{}, error) {
 	// chromedp.WithDebugf(log.Printf),
 	)
 	defer cancel()
-	listenNetworkEvent(ctx, channel, &responseBody, defineRequestNameByPlatforms(url))
 
-	if err = chromedp.Run(ctx, getPostMetaData(url, channel)); err != nil {
-		log.Fatal(err)
+	if isTwitter(url) {
+		listenNetworkEvent(ctx, channel, &responseBody, "TweetDetail")
 	}
 
-	fmt.Printf("page retrieve complete!\n")
+	var elem []string
+	if err = chromedp.Run(ctx, getPostMetaData(url, channel, &elem)); err != nil {
+		colorLog.Info("runError : %v", err)
+		time.Sleep(time.Hour)
+		return nil, err
+	}
+	// fmt.Printf(">>>>>>>>>>>\t elem is \n%v\n", elem)
 
+	if isTwitter(url) {
+		if dataMapList, err := validateData(responseBody); err != nil {
+			return nil, err
+		} else {
+			return dataMapList, nil
+		}
+	}
+	return []map[string]interface{}{
+		convertMap(elem),
+	}, nil
+}
+
+func convertMap(elem []string) map[string]interface{} {
+	dataMap := map[string]interface{}{}
+	for i := 0; i < len(elem); i += 2 {
+		dataMap[elem[i]] = elem[i+1]
+	}
+	return dataMap
+}
+
+func validateData(responseBody string) ([]map[string]interface{}, error) {
+	var err error
 	if !strings.Contains(responseBody, "variants") {
 		return nil, fmt.Errorf("there's no variants - twitter err")
 	}
 
-	if responseBody, err = parseURI(responseBody); err != nil {
+	if responseBody, err = filterJson(responseBody); err != nil {
 		return nil, fmt.Errorf("parsing error - regex")
 	}
 	responseBody = fmt.Sprintf(`{%v}`, responseBody)
@@ -79,7 +99,14 @@ func RunCrowler(url string) ([]map[string]interface{}, error) {
 	return dataMapList, nil
 }
 
-func parseURI(responseBody string) (string, error) {
+func isTwitter(url string) bool {
+	if strings.Contains(url, "https://twitter.com") {
+		return true
+	}
+	return false
+}
+
+func filterJson(responseBody string) (string, error) {
 	responseBody = strings.ReplaceAll(responseBody, " ", "")
 	//"variants":[{"bitrate":632000,"content_type":"video/mp4","url":"https://video.twimg.com/ext_tw_video/1593749370519707648/pu/vid/320x690/87DtVdvn-vAe2oVH.mp4?tag=12"},
 	//{"bitrate":2176000,"content_type":"video/mp4","url":"https://video.twimg.com/ext_tw_video/1593749370519707648/pu/vid/592x1280/zG4CO3aA57JY0EBT.mp4?tag=12"},
@@ -97,20 +124,62 @@ func parseURI(responseBody string) (string, error) {
 	return "", fmt.Errorf("can't find from ResponseBody...")
 }
 
-func getPostMetaData(url string, channel chan bool) chromedp.Tasks {
+func getPostMetaData(url string, channel chan bool, elem *[]string) chromedp.Tasks {
+	if strings.Contains(url, "twitter") {
+		return chromedp.Tasks{
+			network.Enable(),
+			chromedp.Navigate(url),
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				maxWaitTime := 10
+				for {
+					if <-channel || maxWaitTime > 10 {
+						// fmt.Printf("\ntotal %v sec waited... break\n", 10-maxWaitTime)
+						break
+					}
+					maxWaitTime -= 1
+					time.Sleep(time.Second * 1)
+				}
+				return nil
+			}),
+		}
+	}
+	var loc string
+
 	return chromedp.Tasks{
 		network.Enable(),
 		chromedp.Navigate(url),
+		chromedp.Location(&loc),
+		chromedp.Sleep(time.Second * 1),
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			maxWaitTime := 10
-			for {
-				if <-channel || maxWaitTime > 10 {
-					// fmt.Printf("\ntotal %v sec waited... break\n", 10-maxWaitTime)
-					break
-				}
-				maxWaitTime -= 1
-				time.Sleep(time.Second * 1)
+			// if strings.Contains(loc, "account") {
+			chromedp.WaitReady(`#loginForm`, chromedp.ByID).Do(ctx)
+			colorLog.Info("load complete....")
+
+			chromedp.Click(`input[name="username"]`).Do(ctx)
+			chromedp.SendKeys(`input[name="username"]`, INSTAGRAM_USERNAME+kb.Tab).Do(ctx)
+			// chromedp.Sleep(time.Second * 3).Do(ctx)
+			chromedp.SendKeys(`input[name="password"]`, INSTAGRAM_PASSWORD+kb.Enter).Do(ctx)
+			// }
+			return nil
+		}),
+		chromedp.Location(&loc),
+
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			colorLog.Info("url : %v", loc)
+			if strings.Contains(loc, "account") {
+				colorLog.Info("its account page....")
+				chromedp.Sleep(time.Second * 3).Do(ctx)
+				chromedp.EvaluateAsDevTools(`document.querySelectorAll('button')[1].click()`, nil).Do(ctx)
 			}
+			return nil
+		}),
+		chromedp.Location(&loc),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			colorLog.Info("url : %v\n", loc)
+			var projects []*cdp.Node
+			chromedp.Nodes(`video[src]`, &projects).Do(ctx)
+			// attributes = *&projects[0].Attributes
+			*elem = *&projects[0].Attributes
 			return nil
 		}),
 	}
@@ -124,8 +193,7 @@ func listenNetworkEvent(ctx context.Context, channel chan bool, responseBody *st
 			if ev.Type == "XHR" {
 				if strings.Contains(ev.Request.URL, requestName) {
 					reqId = ev.RequestID.String()
-					// fmt.Printf("\trequestID>%#v\n", reqId)
-					// fmt.Printf("\trequest>%#v\n", ev.Request.URL)
+					// fmt.Printf("\trequestID>%#v\n", reqId) // fmt.Printf("\trequest>%#v\n", ev.Request.URL)
 				}
 			}
 		case *network.EventResponseReceived:
