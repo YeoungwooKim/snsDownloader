@@ -3,7 +3,6 @@ package colorLog
 import (
 	"fmt"
 	"headless/internal/pkg/colorPreset"
-	"headless/internal/pkg/email"
 	"io"
 	"log"
 	"os"
@@ -56,7 +55,8 @@ func newLogger(level int, saveLog bool, postLog bool, mailingService bool) *Logg
 	catchShutdown(
 		func(isEnableMailingService bool) func() {
 			if isEnableMailingService {
-				return postingLogData
+				// return calling function which sends email...
+				return nil
 			} else {
 				// fmt.Printf("no mailing service \n")
 				return nil
@@ -85,10 +85,10 @@ func catchShutdown(gracefulShutdownFunc ...func()) {
 	// close
 	go func() {
 		sig := <-sigs
-		file, multiWriter := initFileIo("output.log")
-		defer file.Close()
-		log.SetOutput(multiWriter)
-		log.SetPrefix("")
+		// file, multiWriter := initFileIo("output.log")
+		// defer file.Close()
+		// log.SetOutput(multiWriter)
+		// log.SetPrefix("")
 		log.Println("::: Terminating... :::\ncaught signal : ", sig)
 
 		for i := 0; i < len(gracefulShutdownFunc); i++ {
@@ -96,22 +96,6 @@ func catchShutdown(gracefulShutdownFunc ...func()) {
 		}
 		os.Exit(0)
 	}()
-}
-
-func postingLogData() {
-	log.Println("exit process - in mail service")
-	var bodyMsg, subject string
-	attachment, _ := os.Getwd()
-	attachment += "/output.log"
-	if _, err := os.Stat(attachment); os.IsNotExist(err) {
-		fmt.Printf("logfile is not generated.. ")
-		return
-	}
-	subject = "[System App Crashed] please check out attached log file."
-	bodyMsg = "<div> [" + time.Now().Format("2006-01-02 15:04:05.000") + "]</div> <strong>check attached file..</strong>"
-
-	email.InitMsg(subject, bodyMsg, attachment)
-	email.SendMail(SENDER, RECEIVER)
 }
 
 // returns specific location info that log declared.
@@ -145,11 +129,12 @@ func (logger *Logger) print(logLevel int, message string, a ...interface{}) {
 	}
 
 	if logLevel >= logger.LogLevel {
-		file, multiWriter := initFileIo("output.log")
-		defer file.Close()
-		log.SetOutput(multiWriter)
-		log.SetPrefix(fmt.Sprintf("[%v][%v][%v]| ", getDate(), logType, caller))
-		log.SetFlags(0)
+		// file, multiWriter := initFileIo("output.log")
+		// defer file.Close()
+		// log.SetOutput(multiWriter)
+		// log.SetPrefix(fmt.Sprintf("[%v][%v][%v]| ", getDate(), logType, caller))
+		// log.SetFlags(0)
+		logType += ""
 
 		log.Println(message)
 	}

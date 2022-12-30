@@ -1,3 +1,5 @@
 /data
 /output.log
 /test.txt
+*_config.go
+mongodb_auth_config.json

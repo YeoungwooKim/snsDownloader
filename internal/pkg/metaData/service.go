@@ -1,4 +1,4 @@
-package youtube
+package metadata
 
 import (
 	"bufio"
@@ -7,82 +7,12 @@ import (
 	"fmt"
 	"headless/internal/pkg/colorLog"
 	"io"
-	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 )
 
-func GetMedia(url, videoId, audioId string) error {
-	pwd, _ := os.Getwd()
-	fileName := fmt.Sprintf("%v/data/%v-", pwd, time.Now().UnixMilli()) + `%(title)s.f%(format_id)s.%(ext)s`
-	quality := fmt.Sprintf("%v+%v", videoId, audioId)
-	//"worstvideo[ext=mp4]+worstaudio[ext=m4a]"
-	cmdLine := fmt.Sprintf(`youtube-dl -f "%v" -o "%v" "%v"`, quality, fileName, url)
-	fmt.Printf("%v\n\n", cmdLine)
-	cmd := exec.Command("sh", "-c", cmdLine)
-	stdOut, err := cmd.StdoutPipe()
-	if err != nil {
-		colorLog.Fatal("cmd.StdoutPipe err %v", err)
-		return err
-	}
-
-	// Start process (wait 하지 않고 수행 - console 확인차)
-	if err := cmd.Start(); err != nil {
-		colorLog.Fatal("fail. executing start. error=%v", err)
-		return err
-	}
-
-	progressFlag := make(chan bool)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	// log check
-	go func() {
-		defer wg.Done()
-		cmdDownloadProgress(stdOut, progressFlag)
-	}()
-	go func() {
-		defer wg.Done()
-		for {
-			if <-progressFlag {
-				break
-			}
-			time.Sleep(time.Second)
-			colorLog.Info("waited 1sec in cmd.wait")
-		}
-		if waitError := cmd.Wait(); waitError != nil {
-			colorLog.Info("wait start.. err %v \n", waitError)
-		} else {
-			colorLog.Info("command properly ended..")
-		}
-	}()
-	wg.Wait()
-	return nil
-}
-
-func cmdDownloadProgress(stream io.ReadCloser, progressFlag chan bool) {
-	// var output string
-	defer func() {
-		stream.Close()
-		progressFlag <- true
-	}()
-	scanner := bufio.NewScanner(stream)
-	scanner.Split(customSplit)
-
-	buf := make([]byte, 2)
-	scanner.Buffer(buf, bufio.MaxScanTokenSize)
-	for scanner.Scan() {
-		// output += scanner.Text()
-		fmt.Println(scanner.Text())
-		// Call Wait after reaching EOF.
-		if err := scanner.Err(); err != nil {
-			colorLog.Fatal("scanner err : %v", err)
-		}
-	}
-}
-
-func GetMediaOptions(url string) (map[string]interface{}, error) {
+func executeMediaOptions(url string) (map[string]interface{}, error) {
 	cmdLine := fmt.Sprintf(`youtube-dl --dump-json "%v" | jq '.formats'`, url)
 	cmd := exec.Command("sh", "-c", cmdLine)
 	// bash command는 stderr에 모든 것을 작성한다.
@@ -91,7 +21,6 @@ func GetMediaOptions(url string) (map[string]interface{}, error) {
 		colorLog.Fatal("cmd.StdoutPipe err %v", stdErr)
 		return nil, stdErr
 	}
-
 	// Start process (wait 하지 않고 수행 - console 확인차)
 	if startErr := cmd.Start(); startErr != nil {
 		colorLog.Fatal("fail. executing start. error=%v", startErr)
@@ -148,7 +77,6 @@ func exportMap(dataMapList []map[string]interface{}) map[string]interface{} {
 	// fmt.Printf("mapLen %v audioLen %v videoLen %v\n", len(dataMap), len(dataMap["audio"].(map[string]interface{})), len(dataMap["video"].(map[string]interface{})))
 	return dataMap
 }
-
 func cmdProgress(stream io.ReadCloser, progressFlag chan bool, jsonString chan string) {
 	var output string
 	defer func() {
