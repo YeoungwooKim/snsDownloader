@@ -1,9 +1,10 @@
 # snsDownloader
 
 #### 환경구성
-> mongo db
-> fiber (golang back-end)
-> youtube-dl
+> mongo db <br>
+> fiber <br>
+> youtube-dl<br>
+<hr/>
 
 #### 주요 기능
 * sns의 미디어 컨텐츠 링크로 영상 다운로드
