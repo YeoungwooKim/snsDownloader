@@ -2,8 +2,8 @@
 
 #### 환경구성
 > mongo db <br>
-> fiber <br>
-> youtube-dl<br>
+> fiber - [link](https://github.com/gofiber/fiber) <br>
+> youtube-dl - [link](https://github.com/ytdl-org/youtube-dl) <br>
 <hr/>
 
 #### 주요 기능
