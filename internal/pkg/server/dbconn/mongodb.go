@@ -2,7 +2,7 @@ package dbconn
 
 import (
 	"context"
-	"headless/internal/pkg/colorLog"
+	"snsDownloader/internal/pkg/colorLog"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -71,6 +71,19 @@ func initSchema() {
 	} else {
 		colorLog.Debug("	create unique index. index=%+v", indexName)
 	}
+
+	collection = GetCollection(DATABASE, "tb_content")
+	mongod = mongo.IndexModel{
+		Keys: bson.M{
+			"uuid": 1,
+		}, Options: options.Index().SetUnique(true).SetName("idx_tb_content_uuid_01"),
+	}
+	if indexName, err := collection.Indexes().CreateOne(context.Background(), mongod); err != nil {
+		colorLog.Error("	failed create index. index=%+v,err=%+v", indexName, err)
+	} else {
+		colorLog.Debug("	create unique index. index=%+v", indexName)
+	}
+
 }
 
 // GetCollection. 특정 Collection을 반환

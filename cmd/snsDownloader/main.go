@@ -1,8 +1,6 @@
 package main
 
-import (
-	"headless/internal/pkg/server"
-)
+import "snsDownloader/internal/pkg/server"
 
 func main() {
 	server.Create()

@@ -5,15 +5,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"headless/internal/pkg/colorLog"
 	"io"
 	"os/exec"
+	"snsDownloader/internal/pkg/colorLog"
 	"strings"
 	"time"
 )
 
 func executeMediaOptions(url string) (map[string]interface{}, error) {
-	cmdLine := fmt.Sprintf(`youtube-dl --dump-json "%v" | jq '.formats'`, url)
+	cmdLine := fmt.Sprintf(`yt-dlp --dump-json "%v" | jq '.formats'`, url)
 	cmd := exec.Command("sh", "-c", cmdLine)
 	// bash command는 stderr에 모든 것을 작성한다.
 	stderrIn, stdErr := cmd.StdoutPipe()

@@ -4,15 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"headless/internal/pkg/colorLog"
 	"io"
 	"os"
 	"os/exec"
 	"regexp"
+	"snsDownloader/internal/pkg/colorLog"
 	"strings"
 	"time"
 )
 
+//	message log output parsing feature
 func ProcessMessage(uuid, message string) map[string]interface{} {
 	if len(strings.ReplaceAll(message, ` `, ``)) == 0 {
 		return nil
@@ -44,11 +45,13 @@ func ProcessMessage(uuid, message string) map[string]interface{} {
 	}
 
 	if len(dataMap) >= 1 {
+		saveContent(uuid, dataMap)
 		saveHistory(uuid, dataMap)
 	}
 	return dataMap
 }
 
+// execute command youtube-dl
 func ExecuteMedia(url string, dataMap map[string]interface{}) (<-chan string, error) {
 	var quality string
 	fmt.Printf("%v %v\n", url, dataMap)
@@ -63,7 +66,7 @@ func ExecuteMedia(url string, dataMap map[string]interface{}) (<-chan string, er
 	}
 	//"worstvideo[ext=mp4]+worstaudio[ext=m4a]"
 
-	cmdLine := fmt.Sprintf(`youtube-dl -f "%v" -o "%v" "%v"`, quality, fileName, url)
+	cmdLine := fmt.Sprintf(`yt-dlp -f "%v" -o "%v" "%v"`, quality, fileName, url)
 	fmt.Printf("%v\n\n", cmdLine)
 	cmd := exec.Command("sh", "-c", cmdLine)
 	stdOut, err := cmd.StdoutPipe()
@@ -72,7 +75,7 @@ func ExecuteMedia(url string, dataMap map[string]interface{}) (<-chan string, er
 		return nil, err
 	}
 
-	// Start process (wait 하지 않고 수행 - console 확인차)
+	// Start process (비동기)
 	if err := cmd.Start(); err != nil {
 		colorLog.Fatal("fail. executing start. error=%v", err)
 		return nil, err
@@ -106,6 +109,7 @@ func ExecuteMedia(url string, dataMap map[string]interface{}) (<-chan string, er
 	return msg, waitError
 }
 
+// sniff youtube-dl stdOut
 func cmdDownloadProgress(stream io.ReadCloser, msg chan<- string, progressFlag chan bool) {
 	defer func() {
 		stream.Close()
@@ -119,27 +123,6 @@ func cmdDownloadProgress(stream io.ReadCloser, msg chan<- string, progressFlag c
 	for scanner.Scan() {
 		msg <- scanner.Text()
 
-		// Call Wait after reaching EOF.
-		if err := scanner.Err(); err != nil {
-			colorLog.Fatal("scanner err : %v", err)
-		}
-	}
-}
-
-func cmdProgress(stream io.ReadCloser, progressFlag chan bool, jsonString chan string) {
-	var output string
-	defer func() {
-		stream.Close()
-		progressFlag <- true
-		jsonString <- output
-	}()
-	scanner := bufio.NewScanner(stream)
-	scanner.Split(customSplit)
-
-	buf := make([]byte, 2)
-	scanner.Buffer(buf, bufio.MaxScanTokenSize)
-	for scanner.Scan() {
-		output += scanner.Text()
 		// Call Wait after reaching EOF.
 		if err := scanner.Err(); err != nil {
 			colorLog.Fatal("scanner err : %v", err)

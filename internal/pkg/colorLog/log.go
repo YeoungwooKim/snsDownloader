@@ -2,12 +2,12 @@ package colorLog
 
 import (
 	"fmt"
-	"headless/internal/pkg/colorPreset"
 	"io"
 	"log"
 	"os"
 	"os/signal"
 	"runtime"
+	"snsDownloader/internal/pkg/colorPreset"
 	"strings"
 	"syscall"
 	"time"

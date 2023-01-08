@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"headless/internal/pkg/colorLog"
-	"headless/internal/pkg/media"
-	metadata "headless/internal/pkg/metaData"
-	"headless/internal/pkg/server/config"
+	"snsDownloader/internal/pkg/colorLog"
+	"snsDownloader/internal/pkg/media"
+	metadata "snsDownloader/internal/pkg/metaData"
+	"snsDownloader/internal/pkg/server/config"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -40,6 +40,8 @@ func Create() *fiber.App {
 
 	videos := v1.Group("/media")
 	videos.Post("", media.GetMedia)
+	// videos.Get("", media.GetAll)
+	videos.Get("/:uuid<guid>", media.GetMediaStatus)
 
 	videosInfo := v1.Group("/meta")
 	videosInfo.Use(metadata.ValidationRouter)

@@ -3,13 +3,16 @@ package metadata
 import (
 	"encoding/json"
 	"fmt"
-	"headless/internal/pkg/validation"
 	"net/http"
+	"snsDownloader/internal/pkg/validation"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
+/*
+	메타데이터 받기전 단계로 검증 역할
+*/
 func ValidationRouter(c *fiber.Ctx) error {
 	valid := *validation.Validate
 	dataMap := make(map[string]interface{})

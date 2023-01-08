@@ -3,10 +3,11 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"headless/internal/pkg/colorLog"
-	"headless/internal/pkg/server/dbconn"
 	"io/ioutil"
 	"os"
+	"snsDownloader/internal/pkg/colorLog"
+	"snsDownloader/internal/pkg/cron"
+	"snsDownloader/internal/pkg/server/dbconn"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -16,6 +17,7 @@ import (
 type EnvConfig struct {
 	HttpPort    int    `env:"HTTP_PORT" default:"8080"`
 	DbUri       string `env:"DB_URI" default:""`
+	QueueUri    string `env:"QUEUE_URI" default:"http://localhost:8090/api/v1/queue"`
 	FiberConfig fiber.Config
 }
 
@@ -26,6 +28,7 @@ func NewConfig() EnvConfig {
 	return EnvConfig{
 		HttpPort: 8080,
 		DbUri:    fmt.Sprintf("mongodb://%v:%v@%v:%v/?authMechanism=SCRAM-SHA-256&ssl=false", dbConfig["username"], dbConfig["password"], dbConfig["hostname"], dbConfig["port"]),
+		QueueUri: "http://localhost:8090/api/v1/queue",
 		FiberConfig: fiber.Config{
 			CaseSensitive:     false,
 			ColorScheme:       fiber.DefaultColors,
@@ -45,6 +48,7 @@ func Load() {
 	colorLog.Info("\tDbUri\t:%v", Config.DbUri)
 
 	dbconn.Create(Config.DbUri)
+	cron.InitCron(3, Config.QueueUri)
 }
 
 func getDbAuth() map[string]string {

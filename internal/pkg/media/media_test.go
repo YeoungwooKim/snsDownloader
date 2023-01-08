@@ -2,8 +2,8 @@ package media_test
 
 import (
 	"fmt"
-	"headless/internal/pkg/media"
 	"regexp"
+	"snsDownloader/internal/pkg/media"
 	"strings"
 	"sync"
 	"testing"

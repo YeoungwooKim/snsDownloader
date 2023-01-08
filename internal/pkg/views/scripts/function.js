@@ -5,24 +5,45 @@ document.getElementById("inputUrl").value = "https://twitter.com/NASA/status/160
 //"https://twitter.com/MUPLY_PLAYLIST/status/1273993946406907904"
 
 
-var qualityCheckBox = document.getElementById('bestQualityCheckBox');
+var response = null;
 
-qualityCheckBox.addEventListener('click', function (event) {
-    if(qualityCheckBox.checked){
-        document.querySelector("#results > button.btn.btn-primary.mx-1").innerHTML = "Download"
-        document.querySelector("#results > button.btn.btn-primary.mx-5").style.display = 'none';
-        document.querySelector("#results > button.btn.btn-success").style.display = 'none';
+document.getElementById('bestQualityCheckBox').addEventListener('click', function (event) {
+    downloadBtn = document.getElementById("downloadButton")
+    toggleBtn = document.getElementById("toggleButton")
+    searchBtn = document.getElementById("searchButton")
+    if (qualityCheckBox.checked) {
+        console.log("hello checked..")
+        searchBtn.value = "Download"
+        swapStatus(downloadBtn, toggleBtn)
     } else {
-        document.querySelector("#results > button.btn.btn-primary.mx-1").innerHTML = "Search"
-        document.querySelector("#results > button.btn.btn-primary.mx-5").style.display = '';
-        document.querySelector("#results > button.btn.btn-success").style.display = '';
+        console.log("hello not checked...")
+        searchBtn.value = "Search"
+        swapStatus(downloadBtn, toggleBtn)
     }
+    searchBtn.innerHTML = searchBtn.value
+    console.log(searchBtn)
 })
+
+function swapStatus(downloadBtn, toggleBtn) {
+    document.getElementById("progressBar").style.display = 'none'
+    if (downloadBtn == null || toggleBtn == null) {
+        console.log("both is null")
+        return
+    }
+    if (toggleBtn.style.display == "") {
+        toggleBtn.style.display = 'none';
+        downloadBtn.style.display = 'none';
+        return
+    }
+    toggleBtn.style.display = '';
+    downloadBtn.style.display = '';
+}
 
 function btnDownload() {
     var obj = new Object();
     obj.platform = document.getElementById("inputGroupSelect").value;
     obj.uri = document.getElementById("inputUrl").value;
+    document.getElementById("progressBar").style.display = "";
 
     videoOption = document.querySelector("input[name=videoOptions]:checked")
     audioOption = document.querySelector("input[name=audioOptions]:checked")
@@ -33,6 +54,15 @@ function btnDownload() {
     if (audioOption != null) {
         obj.audioId = audioOption.value
     }
+
+    $.ajax({
+        method: 'post',
+        async: false, // 동기 요청으로 변경
+        headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+        },
+
+    })
 
     handleFileDownload('/api/v1/media', obj)
 }
@@ -71,6 +101,7 @@ function btnSearch() {
     var obj = new Object();
     obj.platform = document.getElementById("inputGroupSelect").value;
     obj.uri = document.getElementById("inputUrl").value;
+    document.getElementById("progressBar").style.display = "";
 
     isBestQuality = document.getElementById("bestQualityCheckBox").checked
     if (isBestQuality) {
@@ -85,6 +116,7 @@ function btnSearch() {
         if (httpRequest.readyState === XMLHttpRequest.DONE) {
             var result = httpRequest.response;
             if (httpRequest.status === 200) {
+                response = httpRequest.response;
                 serveRequest(result)
             } else {
                 alert(JSON.stringify(result));
@@ -160,6 +192,7 @@ function createSearchBtn() {
     button.setAttribute("type", "button")
     button.setAttribute("onClick", "btnSearch()")
     button.setAttribute("class", "btn btn-primary mx-1")
+    button.setAttribute("id", "searchButton")
     button.innerHTML = "Search"
     return button
 }
@@ -168,6 +201,7 @@ function createDownloadBtn() {
     button.setAttribute("type", "button")
     button.setAttribute("onClick", "btnDownload()")
     button.setAttribute("class", "btn btn-success ")
+    button.setAttribute("id", "downloadButton")
     button.innerHTML = "Download"
     return button
 }
@@ -203,6 +237,7 @@ function createToggleButton(videoCard, audioCard) {
     button.setAttribute("data-target", ".multi-collapse")
     button.setAttribute("onClick", "clickFunc()")
     button.setAttribute("aria-expanded", "false")
+    button.setAttribute("id", "toggleButton")
     button.setAttribute("aria-controls", videoCard + " " + audioCard)
     button.innerHTML = "Toggle options"
     return button
