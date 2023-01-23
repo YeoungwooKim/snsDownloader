@@ -19,45 +19,41 @@ func GetMedia(c *fiber.Ctx) error {
 	uuid := utils.UUIDv4()
 	// fileLocation := ""
 
-	if progress, err := ExecuteMedia(dataMap["uri"].(string), dataMap); err != nil {
+	transcoder := New()
+	if progress, err := transcoder.ExecuteMedia(dataMap["uri"].(string), dataMap); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"code": http.StatusInternalServerError,
 			"err":  fmt.Sprintf("%v", err),
 		})
 	} else {
 		go func() {
+			// afterTenSecond := time.Now().Add(time.Second * 10)
 			for msg := range progress {
 				if dataMap := ProcessMessage(uuid, msg); dataMap["location"] != nil {
 					// fileLocation = fmt.Sprintf("%v%v", dataMap["location"], dataMap["file_name"])
 				}
-				// colorLog.Info("%v", msg)
+				// if time.Now().After(afterTenSecond) {
+				// 	transcoder.Stop()
+				// 	// transcoder.cancelFlag = true
+				// 	transcoder.SetError("hello 10 sec after.\n")
+				// 	fmt.Printf("ended..\n")
+				// 	break
+				// }
 			}
 			commitProgress(uuid)
 		}()
 	}
 	delete(dataMap, "location")
-	// colorLog.Info("%v", fileLocation)
+	// fmt.Printf("%v", fileLocation)
 
 	dataMap["uuid"] = uuid
 	return c.Status(http.StatusCreated).JSON(dataMap)
 }
 
-// func GetAll(c *fiber.Ctx) error {
-// 	var dataMapList []map[string]interface{}
-// 	var err error
+func StopTask(c *fiber.Ctx) error {
 
-// 	if dataMapList, err = getNotCompleteHistory(); err != nil {
-// 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-// 			"code": http.StatusInternalServerError,
-// 			"err":  err.Error(),
-// 		})
-// 	}
-
-// 	return c.Status(http.StatusOK).JSON(fiber.Map{
-// 		"code": http.StatusOK,
-// 		"list": dataMapList,
-// 	})
-// }
+	return nil
+}
 
 func GetMediaStatus(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
@@ -77,26 +73,13 @@ func GetMediaStatus(c *fiber.Ctx) error {
 	}
 }
 
-// func GetMedia(c *fiber.Ctx) error {
-// 	dataMap := make(map[string]interface{})
-// 	json.Unmarshal(c.Body(), &dataMap)
-// 	uuid := utils.UUIDv4()
-// 	fileLocation := ""
+func DownloadMedia(c *fiber.Ctx) error {
+	dataMap := make(map[string]interface{})
+	json.Unmarshal(c.Body(), &dataMap)
+	filePath := c.Params("filename")
 
-// 	if progress, err := ExecuteMedia(dataMap["uri"].(string), dataMap); err != nil {
-// 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-// 			"code": http.StatusInternalServerError,
-// 			"err":  fmt.Sprintf("%v", err),
-// 		})
-// 	} else {
-// 		for msg := range progress {
-// 			if dataMap := ProcessMessage(uuid, msg); dataMap["location"] != nil {
-// 				fileLocation = fmt.Sprintf("%v%v", dataMap["location"], dataMap["file_name"])
-// 			}
-// 			// colorLog.Info("%v", msg)
-// 		}
-// 	}
-// 	// colorLog.Info("%v", fileLocation)
+	fmt.Printf("parameter : %v\n", filePath)
+	fmt.Printf("body : %v\n", dataMap)
 
-// 	return c.Download(fileLocation)
-// }
+	return c.Download(fmt.Sprintf("/Users/kyw/Documents/git/mine/go/snsDownloader/data/%v", filePath))
+}

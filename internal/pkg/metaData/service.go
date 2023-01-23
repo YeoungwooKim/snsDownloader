@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"snsDownloader/internal/pkg/colorLog"
 	"strings"
 	"time"
 )
@@ -18,12 +17,12 @@ func executeMediaOptions(url string) (map[string]interface{}, error) {
 	// bash command는 stderr에 모든 것을 작성한다.
 	stderrIn, stdErr := cmd.StdoutPipe()
 	if stdErr != nil {
-		colorLog.Fatal("cmd.StdoutPipe err %v", stdErr)
+		panic(fmt.Sprintf("cmd.StdoutPipe err %v", stdErr))
 		return nil, stdErr
 	}
 	// Start process (wait 하지 않고 수행 - console 확인차)
 	if startErr := cmd.Start(); startErr != nil {
-		colorLog.Fatal("fail. executing start. error=%v", startErr)
+		panic(fmt.Sprintf("fail. executing start. error=%v", startErr))
 		return nil, startErr
 	}
 
@@ -39,17 +38,17 @@ func executeMediaOptions(url string) (map[string]interface{}, error) {
 				break
 			}
 			time.Sleep(time.Second)
-			colorLog.Info("waited 1sec in cmd.wait")
+			fmt.Printf("waited 1sec in cmd.wait")
 		}
 		if waitError := cmd.Wait(); waitError != nil {
-			colorLog.Info("wait start.. err %v \n", waitError)
+			fmt.Printf("wait start.. err %v \n", waitError)
 		} else {
-			// colorLog.Info("command properly ended..")
+			// fmt.Printf("command properly ended..")
 		}
 	}()
 	dataMapList := []map[string]interface{}{}
 	if unmarshalErr := json.Unmarshal([]byte(<-jsonString), &dataMapList); unmarshalErr != nil {
-		colorLog.Fatal("unmarshal err :%v", unmarshalErr)
+		panic(fmt.Sprintf("unmarshal err :%v", unmarshalErr))
 	}
 
 	return exportMap(dataMapList), nil
@@ -93,7 +92,7 @@ func cmdProgress(stream io.ReadCloser, progressFlag chan bool, jsonString chan s
 		output += scanner.Text()
 		// Call Wait after reaching EOF.
 		if err := scanner.Err(); err != nil {
-			colorLog.Fatal("scanner err : %v", err)
+			panic(fmt.Sprintf("scanner err : %v", err))
 		}
 	}
 }

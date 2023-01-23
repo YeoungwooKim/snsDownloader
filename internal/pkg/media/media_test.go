@@ -13,34 +13,18 @@ import (
 )
 
 func TestYoutubeSingle(t *testing.T) {
-	uri := `https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp`
+	uri := `https://twitter.com/NASA/status/1606686673915584512`
+	//`https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp`
 	var wg sync.WaitGroup
 
 	startTime := time.Now().UnixMilli()
 	wg.Add(1)
 	go func(uri string) {
 		defer wg.Done()
-		// url = `https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp`
-		//`https://www.youtube.com/watch?v=XQPtaXguC3Q&ab_channel=ffeeco`
-		// getOptions := func(uri string) map[string]interface{} {
-		// 	if dataMap, err := youtube.GetMediaOptions(uri); err != nil {
-		// 		fmt.Printf("failed to get media Option %v\n", err)
-		// 		t.Error()
-		// 		return nil
-		// 	} else {
-		// 		v, a := getDummyIDs(dataMap)
-		// 		return map[string]interface{}{
-		// 			"videoId": v,
-		// 			"audioId": a,
-		// 		}
-		// 	}
-		// }
-		// videoId, audioId := getDummyIDs(getOptions(uri))
 		startTime = time.Now().UnixMilli()
-		// if fileLoc, err := youtube.GetMedia(uri, getOptions(uri)); err != nil {
 		optionMap := map[string]interface{}{
-			"videoId": 244,
-			"audioId": 140,
+			// "videoId": 244,
+			// "audioId": 140,
 		}
 		uuid := utils.UUIDv4()
 		fmt.Printf("uuid : %v\n", uuid)
@@ -53,7 +37,6 @@ func TestYoutubeSingle(t *testing.T) {
 			// media := "video"
 			for message := range msg {
 				media.ProcessMessage(uuid, message)
-
 			}
 			fmt.Println("================================================================")
 		}
@@ -123,7 +106,7 @@ func TestRegex(t *testing.T) {
 // 	for i := 0; i < numberOfGoRoutine; i++ {
 // 		go func(uri string) {
 // 			defer func() {
-// 				// colorLog.Info("%vth routine end..", i)
+// 				// fmt.Printf("%vth routine end..", i)
 // 				wg.Done()
 // 			}()
 // 			getRndOptions := func(uri string) map[string]interface{} {

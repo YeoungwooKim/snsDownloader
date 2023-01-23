@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"snsDownloader/internal/pkg/validation"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -33,12 +32,12 @@ func ValidationRouter(c *fiber.Ctx) error {
 		})
 	}
 	fmt.Printf("%#v\n", dataMap)
-	if !strings.Contains(dataMap["uri"].(string), strings.ToLower(dataMap["platform"].(string))) {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"code": http.StatusBadRequest,
-			"err":  "match platform and uri",
-		})
-	}
+	// if !strings.Contains(dataMap["uri"].(string), strings.ToLower(dataMap["platform"].(string))) {
+	// 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+	// 		"code": http.StatusBadRequest,
+	// 		"err":  "match platform and uri",
+	// 	})
+	// }
 	return c.Next()
 }
 

@@ -49,7 +49,7 @@ func GetNotCompleteHistory() ([]map[string]interface{}, error) {
 
 func saveHistory(uuid string, dataMap map[string]interface{}) {
 	collection := dbconn.GetCollection(dbconn.DATABASE, "tb_progress")
-	fmt.Printf("[mongo]\t%+v\n", dataMap)
+	// fmt.Printf("[mongo]\t%+v\n", dataMap)
 	for {
 		now := time.Now()
 		dataMap["uuid"] = uuid

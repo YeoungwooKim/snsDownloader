@@ -2,7 +2,7 @@ package dbconn
 
 import (
 	"context"
-	"snsDownloader/internal/pkg/colorLog"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,7 +21,7 @@ var collection *mongo.Collection
 const DATABASE = "TEST_DATA_BASE"
 
 func Create(dbUri string) {
-	colorLog.Info("init mongo")
+	fmt.Printf("\tinit mongo\n")
 
 	var cancel context.CancelFunc
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -33,14 +33,14 @@ func Create(dbUri string) {
 	var err error
 	client, err = mongo.Connect(ctx, options.Client().ApplyURI(dbUri))
 	if err != nil {
-		colorLog.Error("connection fail. error=%v", err.Error())
+		fmt.Printf("connection fail. error=%v\n", err.Error())
 		panic(err)
 	}
 
 	// cluster일 경우는 모든 곳에 다 연결되므로 localhost시에는 문제가 된다.
 	if 1 != 1 {
 		if err = client.Ping(ctx, nil); err != nil {
-			colorLog.Error("connection ping fail. error=%v", err.Error())
+			fmt.Printf("connection ping fail. error=%v\n", err.Error())
 			panic(err)
 		}
 	}
@@ -48,11 +48,11 @@ func Create(dbUri string) {
 	// cluster 연결이라 로컬에는 안됨
 	if 1 != 1 {
 		if serverStatus, err := client.Database("admin").RunCommand(ctx, bsonx.Doc{{"serverStatus", bsonx.Int32(1)}}).DecodeBytes(); err != nil {
-			colorLog.Error("fail server status. error=%v", err.Error())
+			fmt.Printf("fail server status. error=%v\n", err.Error())
 		} else if version, err := serverStatus.LookupErr("version"); err != nil {
-			colorLog.Error("fail server version. error=%v", err.Error())
+			fmt.Printf("fail server version. error=%v\n", err.Error())
 		} else {
-			colorLog.Info("server version : %v", version.String())
+			fmt.Printf("server version : %v\n", version.String())
 		}
 	}
 	initSchema()
@@ -67,9 +67,9 @@ func initSchema() {
 	}
 
 	if indexName, err := collection.Indexes().CreateOne(context.Background(), mongod); err != nil {
-		colorLog.Error("	failed create index. index=%+v,err=%+v", indexName, err)
+		fmt.Printf("	failed create index. index=%+v,err=%+v\n", indexName, err)
 	} else {
-		colorLog.Debug("	create unique index. index=%+v", indexName)
+		fmt.Printf("	create unique index. index=%+v\n", indexName)
 	}
 
 	collection = GetCollection(DATABASE, "tb_content")
@@ -79,9 +79,9 @@ func initSchema() {
 		}, Options: options.Index().SetUnique(true).SetName("idx_tb_content_uuid_01"),
 	}
 	if indexName, err := collection.Indexes().CreateOne(context.Background(), mongod); err != nil {
-		colorLog.Error("	failed create index. index=%+v,err=%+v", indexName, err)
+		fmt.Printf("	failed create index. index=%+v,err=%+v\n", indexName, err)
 	} else {
-		colorLog.Debug("	create unique index. index=%+v", indexName)
+		fmt.Printf("	create unique index. index=%+v\n", indexName)
 	}
 
 }
@@ -98,7 +98,7 @@ func GetContext() context.Context {
 
 // Close. 연결된 Client를 종료한다.
 func Close() {
-	colorLog.Info("close mongodb")
+	fmt.Printf("close mongodb\n")
 	if client == nil {
 		return
 	}
@@ -107,7 +107,7 @@ func Close() {
 	parentContextCancelFunc()
 
 	if err := client.Disconnect(parentContext); err != nil {
-		colorLog.Error("disconnect fail. error=%v", err.Error())
+		fmt.Printf("disconnect fail. error=%v\n", err.Error())
 		//panic(err)
 	}
 }

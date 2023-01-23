@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"snsDownloader/internal/pkg/colorLog"
-	"snsDownloader/internal/pkg/cron"
 	"snsDownloader/internal/pkg/server/dbconn"
 	"time"
 
@@ -44,18 +42,19 @@ func NewConfig() EnvConfig {
 var Config = NewConfig()
 
 func Load() {
-	colorLog.Info("\tHttpPort\t:%v", Config.HttpPort)
-	colorLog.Info("\tDbUri\t:%v", Config.DbUri)
+	fmt.Printf("\tHttpPort\t:%v\n", Config.HttpPort)
+	fmt.Printf("\tDbUri\t:%v\n", Config.DbUri)
 
 	dbconn.Create(Config.DbUri)
-	cron.InitCron(3, Config.QueueUri)
+	// cron.InitCron(3, Config.QueueUri)
+	// go kafka.ConsumeMessage()
 }
 
 func getDbAuth() map[string]string {
 	pwd, _ := os.Getwd()
 	data, err := os.Open(fmt.Sprintf("%v/mongodb_auth_config.json", pwd))
 	if err != nil {
-		colorLog.Info("%v", err)
+		fmt.Printf("%v\n", err)
 		return nil
 	}
 	var dbConfig map[string]string

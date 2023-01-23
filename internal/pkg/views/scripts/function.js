@@ -1,28 +1,14 @@
 
 // document.getElementById("inputUrl").placeholder = 'https://twitter.com/i/status/1273993946406907904'
-document.getElementById("inputUrl").value = "https://twitter.com/NASA/status/1606686673915584512"
+document.getElementById("inputUrl").value = "https://youtu.be/qORaYudQ7Zc"
+
+//"https://twitter.com/NASA/status/1606686673915584512"
 //"https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp"
 //"https://twitter.com/MUPLY_PLAYLIST/status/1273993946406907904"
 
 
 var response = null;
 
-document.getElementById('bestQualityCheckBox').addEventListener('click', function (event) {
-    downloadBtn = document.getElementById("downloadButton")
-    toggleBtn = document.getElementById("toggleButton")
-    searchBtn = document.getElementById("searchButton")
-    if (qualityCheckBox.checked) {
-        console.log("hello checked..")
-        searchBtn.value = "Download"
-        swapStatus(downloadBtn, toggleBtn)
-    } else {
-        console.log("hello not checked...")
-        searchBtn.value = "Search"
-        swapStatus(downloadBtn, toggleBtn)
-    }
-    searchBtn.innerHTML = searchBtn.value
-    console.log(searchBtn)
-})
 
 function swapStatus(downloadBtn, toggleBtn) {
     document.getElementById("progressBar").style.display = 'none'
@@ -45,8 +31,8 @@ function btnDownload() {
     obj.uri = document.getElementById("inputUrl").value;
     document.getElementById("progressBar").style.display = "";
 
-    videoOption = document.querySelector("input[name=videoOptions]:checked")
-    audioOption = document.querySelector("input[name=audioOptions]:checked")
+    videoOption = document.querySelector("input[name^=video]:checked")
+    audioOption = document.querySelector("input[name^=audio]:checked")
 
     if (videoOption != null) {
         obj.videoId = videoOption.value
@@ -54,17 +40,41 @@ function btnDownload() {
     if (audioOption != null) {
         obj.audioId = audioOption.value
     }
-
+    response = null;
     $.ajax({
         method: 'post',
+        url: "http://localhost:8080/api/v1/media",
         async: false, // 동기 요청으로 변경
+        data: JSON.stringify(obj),
         headers: {
             'Content-Type': 'application/json;charset=utf-8'
         },
-
+        success: function (event) {
+            response = event;
+        },
+        error: function (event) {
+            alert(event)
+        }
     })
 
-    handleFileDownload('/api/v1/media', obj)
+    promise = new Promise(function (resolve, reject) {
+        interval = setInterval(function () {
+            $.get('http://localhost:8080/api/v1/media/' + response.uuid, function (data) {
+                if (data != null) {
+                    console.log(data)
+                    progressBar = document.getElementsByClassName("progress-bar progress-bar-striped progress-bar-animated")
+                    progressBar[0].style = "width : " + data.download_percent;
+                }
+                if (data.download_percent == '100.0%') {
+                    resolve(data);
+                    clearInterval(interval);
+                }
+            })
+        }, 500);
+    }).then(function (result) {
+        handleFileDownload("/api/v1/media/" + result.file_name, obj)
+    })
+
 }
 
 async function handleFileDownload(url, requestBody) {
@@ -105,7 +115,8 @@ function btnSearch() {
 
     isBestQuality = document.getElementById("bestQualityCheckBox").checked
     if (isBestQuality) {
-        handleFileDownload('/api/v1/media', obj);
+        // handleFileDownload('/api/v1/media', obj);
+        btnDownload()
         return;
     }
     targetUri = '/api/v1/meta'
@@ -153,12 +164,13 @@ function serveRequest(response) {
     videoRadioDiv = document.createElement("div")
     videoRadioDiv.setAttribute("class", "my-3")
     for (var key in response.video) {
-        radioButton = createRadioButton("video", key)
+        radioButton = createRadioButton("video", key, response)
         label = createLabel("video", key, response)
 
         cardDiv.append(radioButton, label)
     }
     multiCollapseDiv1.append(cardDiv)
+
 
     colDiv.append(multiCollapseDiv1)
     rowDiv.append(colDiv)
@@ -171,7 +183,7 @@ function serveRequest(response) {
         audioRadioDiv = document.createElement("div")
         audioRadioDiv.setAttribute("class", "mb-3")
         for (var key in response.audio) {
-            radioButton = createRadioButton("audio", key)
+            radioButton = createRadioButton("audio", key, response)
             label = createLabel("audio", key, response)
 
             cardDiv.append(radioButton, label)
@@ -185,6 +197,31 @@ function serveRequest(response) {
     resultsDiv.append(rowDiv)
 
     document.getElementById("results").replaceChildren(resultsDiv)
+
+    autoSelect("video")
+    autoSelect("audio")
+}
+
+function autoSelect(mediaType) {
+    list = document.querySelectorAll("input[name^=" + mediaType + "Options]")
+    // console.log(list)
+    maxFileSize = -10000
+    idx = -10
+    for (i = 0; i < list.length; i++) {
+        tempFileSize = Number(list[i].name.split("-")[1])
+        if (tempFileSize > maxFileSize) {
+            maxFileSize = tempFileSize;
+            idx = i;
+        }
+    }
+    if (idx >= 0) {
+        console.log("biggest >" + mediaType)
+        console.log(list[idx].parentNode.previousSibling);
+        // chkbox = document.querySelectorAll("input[name^='videoOptions-6']")[0]
+        // {/* <input type=​"hidden" name=​"videoOptions-630.79">​ */ }
+        list[idx].parentNode.previousSibling.checked = true
+        // list[idx].checked = true
+    }
 }
 
 function createSearchBtn() {
@@ -243,26 +280,49 @@ function createToggleButton(videoCard, audioCard) {
     return button
 }
 
-function createRadioButton(mediaType, key) {
+function createRadioButton(mediaType, key, response) {
+    filesize = (mediaType == "video") ? response.video[key].filesize / (1024 * 1024) : response.audio[key].filesize / (1024 * 1024)
     button = document.createElement("input")
     button.setAttribute("type", "radio")
-    button.setAttribute("name", mediaType + "Options")
+    button.setAttribute("name", mediaType)
     button.setAttribute("value", key)
     button.setAttribute("id", mediaType + key)
     button.setAttribute("class", "btn-check")
+
     return button
+}
+
+function hidden(mediaType, key, response) {
+    hiddenTag = document.createElement("input")
+    hiddenTag.setAttribute("type", "hidden")
+    if (mediaType == "video") {
+        filesize = response.video[key].filesize / (1024 * 1024)
+        hiddenTag.setAttribute("name", mediaType + "Options-" + filesize.toFixed(2))
+    } else {
+        filesize = response.audio[key].filesize / (1024 * 1024)
+        hiddenTag.setAttribute("name", mediaType + "Options-" + filesize.toFixed(2))
+    }
+
+    return hiddenTag
 }
 
 function createLabel(mediaType, key, response) {
     label = document.createElement("label")
     label.setAttribute("for", mediaType + key)
+    hiddenTag = null;
     if (mediaType == "video") {
+        filesize = response.video[key].filesize / (1024 * 1024)
         label.setAttribute("class", "btn btn-outline-success mx-2 my-1")
-        label.innerHTML = response.video[key].format.split("-")[1] + "(" + response.video[key].filesize + ")"
+        label.innerHTML = response.video[key].format.split("-")[1] + "(" + filesize.toFixed(2) + "mb)"
+        hiddenTag = hidden("video", key, response)
     } else {
+        filesize = response.audio[key].filesize / (1024 * 1024)
         label.setAttribute("class", "btn btn-outline-primary mx-2 my-1")
-        label.innerHTML = response.audio[key].format.split("-")[1] + "(" + response.audio[key].filesize + ")"
+        label.setAttribute("name", mediaType + "Options-" + filesize.toFixed(2) + "mb")
+        label.innerHTML = response.audio[key].format.split("-")[1] + "(" + filesize.toFixed(2) + "mb)"
+        hiddenTag = hidden("audio", key, response)
     }
+    label.appendChild(hiddenTag)
     return label
 }
 
