@@ -1,53 +1,30 @@
 package metadata
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
+	"snsDownload/internal/pkg/log"
 	"strings"
-	"time"
 )
 
 func executeMediaOptions(url string) (map[string]interface{}, error) {
+	var outBuffer, errBuffer bytes.Buffer
 	cmdLine := fmt.Sprintf(`yt-dlp --dump-json "%v" | jq '.formats'`, url)
 	cmd := exec.Command("sh", "-c", cmdLine)
+	defer func() {
+		cmd = nil
+	}()
 	// bash command는 stderr에 모든 것을 작성한다.
-	stderrIn, stdErr := cmd.StdoutPipe()
-	if stdErr != nil {
-		panic(fmt.Sprintf("cmd.StdoutPipe err %v", stdErr))
-		return nil, stdErr
+	cmd.Stdout = &outBuffer
+	cmd.Stderr = &errBuffer
+	if err := cmd.Run(); err != nil {
+		log.Info("command err %v", err)
+		return nil, fmt.Errorf("cmd.Run error %v", err)
 	}
-	// Start process (wait 하지 않고 수행 - console 확인차)
-	if startErr := cmd.Start(); startErr != nil {
-		panic(fmt.Sprintf("fail. executing start. error=%v", startErr))
-		return nil, startErr
-	}
-
-	progressFlag := make(chan bool)
-	jsonString := make(chan string)
-	// log check
-	go func() {
-		cmdProgress(stderrIn, progressFlag, jsonString)
-	}()
-	go func() {
-		for {
-			if <-progressFlag {
-				break
-			}
-			time.Sleep(time.Second)
-			fmt.Printf("waited 1sec in cmd.wait")
-		}
-		if waitError := cmd.Wait(); waitError != nil {
-			fmt.Printf("wait start.. err %v \n", waitError)
-		} else {
-			// fmt.Printf("command properly ended..")
-		}
-	}()
 	dataMapList := []map[string]interface{}{}
-	if unmarshalErr := json.Unmarshal([]byte(<-jsonString), &dataMapList); unmarshalErr != nil {
+	if unmarshalErr := json.Unmarshal(outBuffer.Bytes(), &dataMapList); unmarshalErr != nil {
 		panic(fmt.Sprintf("unmarshal err :%v", unmarshalErr))
 	}
 
@@ -75,26 +52,6 @@ func exportMap(dataMapList []map[string]interface{}) map[string]interface{} {
 	}
 	// fmt.Printf("mapLen %v audioLen %v videoLen %v\n", len(dataMap), len(dataMap["audio"].(map[string]interface{})), len(dataMap["video"].(map[string]interface{})))
 	return dataMap
-}
-func cmdProgress(stream io.ReadCloser, progressFlag chan bool, jsonString chan string) {
-	var output string
-	defer func() {
-		stream.Close()
-		progressFlag <- true
-		jsonString <- output
-	}()
-	scanner := bufio.NewScanner(stream)
-	scanner.Split(customSplit)
-
-	buf := make([]byte, 2)
-	scanner.Buffer(buf, bufio.MaxScanTokenSize)
-	for scanner.Scan() {
-		output += scanner.Text()
-		// Call Wait after reaching EOF.
-		if err := scanner.Err(); err != nil {
-			panic(fmt.Sprintf("scanner err : %v", err))
-		}
-	}
 }
 
 func customSplit(data []byte, eof bool) (advance int, token []byte, spliterror error) {

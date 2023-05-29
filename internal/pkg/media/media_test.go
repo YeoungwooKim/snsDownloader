@@ -3,7 +3,7 @@ package media_test
 import (
 	"fmt"
 	"regexp"
-	"snsDownloader/internal/pkg/media"
+	"snsDownload/internal/pkg/media"
 	"strings"
 	"sync"
 	"testing"
@@ -13,19 +13,38 @@ import (
 )
 
 func TestYoutubeSingle(t *testing.T) {
-	uri := `https://twitter.com/NASA/status/1606686673915584512`
+	// uri := `https://twitter.com/NASA/status/1606686673915584512`
+	// uri := `https://twitter.com/NASA/status/1606686673915584512"; ls -ashl; echo "hello`
 	//`https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp`
 	var wg sync.WaitGroup
 
 	startTime := time.Now().UnixMilli()
+	optionMap := map[string]interface{}{
+		"platform": "Twitter",
+		"videoId":  "http-2176",
+		"audioId":  nil,
+		"uri":      `https://www.youtube.com/watch?v=qORaYudQ7Zc&ab_channel=STUDIOCHOOM%5B%EC%8A%A4%ED%8A%9C%EB%94%94%EC%98%A4%EC%B6%A4%5D`,
+	}
+	shellInjections := []string{"&", "&&", "|", "||", ";", " ", "0x0a", "\n", "$", "`", "'", `"`}
+	for key, value := range optionMap {
+		switch value.(type) {
+		case string:
+			fmt.Printf("will be checked %v\n", value)
+		default:
+			continue
+		}
+		for _, injection := range shellInjections {
+			if strings.Contains(value.(string), injection) {
+				optionMap[key] = strings.ReplaceAll(optionMap[key].(string), injection, "")
+				fmt.Printf("\t[changed] %v\n", optionMap[key])
+			}
+		}
+	}
+
 	wg.Add(1)
 	go func(uri string) {
 		defer wg.Done()
 		startTime = time.Now().UnixMilli()
-		optionMap := map[string]interface{}{
-			// "videoId": 244,
-			// "audioId": 140,
-		}
 		uuid := utils.UUIDv4()
 		fmt.Printf("uuid : %v\n", uuid)
 
@@ -40,7 +59,7 @@ func TestYoutubeSingle(t *testing.T) {
 			}
 			fmt.Println("================================================================")
 		}
-	}(uri)
+	}(optionMap["uri"].(string))
 	wg.Wait()
 	endTime := time.Now().UnixMilli()
 	fmt.Printf("total Time : %vs\n", calculateTime(startTime, endTime))

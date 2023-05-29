@@ -1,6 +1,7 @@
 
 // document.getElementById("inputUrl").placeholder = 'https://twitter.com/i/status/1273993946406907904'
-document.getElementById("inputUrl").value = "https://youtu.be/qORaYudQ7Zc"
+document.getElementById("inputUrl").value = "https://www.youtube.com/watch?v=qORaYudQ7Zc&ab_channel=STUDIOCHOOM%5B%EC%8A%A4%ED%8A%9C%EB%94%94%EC%98%A4%EC%B6%A4%5D"
+//"https://youtu.be/qORaYudQ7Zc"
 
 //"https://twitter.com/NASA/status/1606686673915584512"
 //"https://www.youtube.com/watch?v=C0DPdy98e4c&ab_channel=SimonYapp"
@@ -57,35 +58,62 @@ function btnDownload() {
         }
     })
 
-    promise = new Promise(function (resolve, reject) {
-        interval = setInterval(function () {
-            $.get('http://localhost:8080/api/v1/media/' + response.uuid, function (data) {
-                if (data != null) {
-                    console.log(data)
-                    progressBar = document.getElementsByClassName("progress-bar progress-bar-striped progress-bar-animated")
-                    progressBar[0].style = "width : " + data.download_percent;
-                }
-                if (data.download_percent == '100.0%') {
-                    resolve(data);
-                    clearInterval(interval);
-                }
-            })
-        }, 500);
-    }).then(function (result) {
-        handleFileDownload("/api/v1/media/" + result.file_name, obj)
-    })
+    const progressCheck = function () {
+        console.log("before wait")
+        return new Promise(function (resolve, reject) {
+            interval = setInterval(function () {
+                $.get('http://localhost:8080/api/v1/media/' + response.uuid, function (data) {
+                    if (data != null) {
+                        console.log(data)
+                        progressBar = document.getElementsByClassName("progress-bar progress-bar-striped progress-bar-animated")
+                        progressBar[0].style = "width : " + data.download_percent;
+                    }
+                    if (data.download_percent == '100.0%') {
+                        resolve(data);
+                        clearInterval(interval);
+                    }
+                })
+            }, 500);
+        })
+    }
 
+    const waitUntilBinaryGenerated = function (data) {
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                console.log('while wait');
+                resolve(data);
+            }, 3000);
+        });
+    }
+
+    const callSomething = function (data) {
+        console.log("after wait.")
+        console.log(data)
+        handleFileDownload("/api/v1/media/" + data.file_name)
+        // return new Promise(function (resolve, reject) {
+        //     const response = fetch("/api/v1/media/" + data.file_name, {
+        //         method: 'post',
+        //         headers: {
+        //             'Content-Type': 'application/json;charset=utf-8'
+        //         },
+        //     })
+        // })
+    }
+    progressCheck()
+        .then(waitUntilBinaryGenerated)
+        .then(callSomething)
 }
 
-async function handleFileDownload(url, requestBody) {
+async function handleFileDownload(url) {
     const response = await fetch(url, {
         method: 'post',
         headers: {
             'Content-Type': 'application/json;charset=utf-8'
         },
-        body: JSON.stringify(requestBody)
-    });
+        // body: JSON.stringify(null)
+    })
     const file = await response.blob();
+
     fileName = response.headers.get('content-disposition') + ""
     fileName = fileName.replace("attachment; filename=", "")
     fileName = fileName.replaceAll(`"`, '')
@@ -99,6 +127,7 @@ async function handleFileDownload(url, requestBody) {
     anchorElement.click(); // 코드 상으로 클릭을 해줘서 다운로드를 트리거
 
     document.body.removeChild(anchorElement); // cleanup - 쓰임을 다한 a 태그 삭제
+
 }
 
 /**
@@ -115,7 +144,6 @@ function btnSearch() {
 
     isBestQuality = document.getElementById("bestQualityCheckBox").checked
     if (isBestQuality) {
-        // handleFileDownload('/api/v1/media', obj);
         btnDownload()
         return;
     }

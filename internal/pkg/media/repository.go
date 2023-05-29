@@ -3,7 +3,7 @@ package media
 import (
 	"context"
 	"fmt"
-	"snsDownloader/internal/pkg/server/dbconn"
+	"snsDownload/internal/pkg/server/dbconn"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"

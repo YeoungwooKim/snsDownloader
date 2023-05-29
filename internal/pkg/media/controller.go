@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/utils"
@@ -18,6 +19,7 @@ func GetMedia(c *fiber.Ctx) error {
 	json.Unmarshal(c.Body(), &dataMap)
 	uuid := utils.UUIDv4()
 	// fileLocation := ""
+	// return c.Status(207).JSON(dataMap)
 
 	transcoder := New()
 	if progress, err := transcoder.ExecuteMedia(dataMap["uri"].(string), dataMap); err != nil {
@@ -76,10 +78,20 @@ func GetMediaStatus(c *fiber.Ctx) error {
 func DownloadMedia(c *fiber.Ctx) error {
 	dataMap := make(map[string]interface{})
 	json.Unmarshal(c.Body(), &dataMap)
-	filePath := c.Params("filename")
+	filename := c.Params("filename")
 
-	fmt.Printf("parameter : %v\n", filePath)
+	fmt.Printf("parameter : %v\n", filename)
 	fmt.Printf("body : %v\n", dataMap)
 
-	return c.Download(fmt.Sprintf("/Users/kyw/Documents/git/mine/go/snsDownloader/data/%v", filePath))
+	pwd, _ := os.Getwd()
+	fmt.Println(pwd)
+	if _, err := os.Stat(fmt.Sprintf("%v/data/%v", pwd, filename)); err == nil {
+		return c.Download(fmt.Sprintf("/Users/kyw/Documents/git/mine/go/snsDownloader/data/%v", filename))
+	} else {
+		fmt.Printf("err %v\n\n", err)
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"code": http.StatusNotFound,
+			"err":  err.Error(),
+		})
+	}
 }

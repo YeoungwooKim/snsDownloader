@@ -78,8 +78,8 @@ func ProcessMessage(uuid, message string) map[string]interface{} {
 	}
 
 	if len(dataMap) >= 1 {
-		saveContent(uuid, dataMap)
-		saveHistory(uuid, dataMap)
+		// saveContent(uuid, dataMap)
+		// saveHistory(uuid, dataMap)
 	}
 	return dataMap
 }

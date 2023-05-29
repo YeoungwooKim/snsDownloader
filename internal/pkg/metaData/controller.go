@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"snsDownloader/internal/pkg/validation"
+	"snsDownload/internal/pkg/validation"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -14,6 +14,7 @@ import (
 */
 func ValidationRouter(c *fiber.Ctx) error {
 	valid := *validation.Validate
+
 	dataMap := make(map[string]interface{})
 	// request body를 파싱.
 	if err := json.Unmarshal(c.Body(), &dataMap); err != nil {
@@ -31,7 +32,7 @@ func ValidationRouter(c *fiber.Ctx) error {
 			"err":  fmt.Sprintf("%v", err),
 		})
 	}
-	fmt.Printf("%#v\n", dataMap)
+	fmt.Printf("validation-complete %#v\n", dataMap)
 	// if !strings.Contains(dataMap["uri"].(string), strings.ToLower(dataMap["platform"].(string))) {
 	// 	return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 	// 		"code": http.StatusBadRequest,

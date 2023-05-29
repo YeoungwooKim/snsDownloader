@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"snsDownloader/internal/pkg/media"
+	"snsDownload/internal/pkg/media"
 	"time"
 )
 

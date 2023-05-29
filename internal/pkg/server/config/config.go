@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"snsDownloader/internal/pkg/server/dbconn"
+	"snsDownload/internal/pkg/server/dbconn"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,16 +17,21 @@ type EnvConfig struct {
 	DbUri       string `env:"DB_URI" default:""`
 	QueueUri    string `env:"QUEUE_URI" default:"http://localhost:8090/api/v1/queue"`
 	FiberConfig fiber.Config
+	NaverId     string
+	NaverSecret string
 }
 
 func NewConfig() EnvConfig {
 	pwd, _ := os.Getwd()
 	templateEngine := html.New(fmt.Sprintf("%s/internal/pkg/views", pwd), ".html")
-	dbConfig := getDbAuth()
+	dbConfig := getConfigKeys("mongodb_auth_config.json")
+	appKey := getConfigKeys("naver_app_key.json")
 	return EnvConfig{
-		HttpPort: 8080,
-		DbUri:    fmt.Sprintf("mongodb://%v:%v@%v:%v/?authMechanism=SCRAM-SHA-256&ssl=false", dbConfig["username"], dbConfig["password"], dbConfig["hostname"], dbConfig["port"]),
-		QueueUri: "http://localhost:8090/api/v1/queue",
+		HttpPort:    8080,
+		DbUri:       fmt.Sprintf("mongodb://%v:%v@%v:%v/?authMechanism=SCRAM-SHA-256&ssl=false", dbConfig["username"], dbConfig["password"], dbConfig["hostname"], dbConfig["port"]),
+		QueueUri:    "http://localhost:8090/api/v1/queue",
+		NaverId:     appKey["clientId"],
+		NaverSecret: appKey["clientSecret"],
 		FiberConfig: fiber.Config{
 			CaseSensitive:     false,
 			ColorScheme:       fiber.DefaultColors,
@@ -44,21 +49,23 @@ var Config = NewConfig()
 func Load() {
 	fmt.Printf("\tHttpPort\t:%v\n", Config.HttpPort)
 	fmt.Printf("\tDbUri\t:%v\n", Config.DbUri)
+	// fmt.Printf("\tNaverId\t:%v\n", Config.NaverId)
+	// fmt.Printf("\tNaverSecret\t:%v\n", Config.NaverSecret)
 
 	dbconn.Create(Config.DbUri)
 	// cron.InitCron(3, Config.QueueUri)
 	// go kafka.ConsumeMessage()
 }
 
-func getDbAuth() map[string]string {
+func getConfigKeys(fileName string) map[string]string {
 	pwd, _ := os.Getwd()
-	data, err := os.Open(fmt.Sprintf("%v/mongodb_auth_config.json", pwd))
+	data, err := os.Open(fmt.Sprintf("%v/%v", pwd, fileName))
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return nil
 	}
-	var dbConfig map[string]string
+	var dataMap map[string]string
 	byteValue, _ := ioutil.ReadAll(data)
-	json.Unmarshal(byteValue, &dbConfig)
-	return dbConfig
+	json.Unmarshal(byteValue, &dataMap)
+	return dataMap
 }

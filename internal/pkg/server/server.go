@@ -1,13 +1,10 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"snsDownloader/internal/pkg/media"
-	metadata "snsDownloader/internal/pkg/metaData"
-	"snsDownloader/internal/pkg/server/config"
-	"strings"
+	"snsDownload/internal/pkg/media"
+	metadata "snsDownload/internal/pkg/metaData"
+	"snsDownload/internal/pkg/server/config"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -36,31 +33,32 @@ func Create() *fiber.App {
 	v1 := api.Group("/v1")
 	v1.Use(func(c *fiber.Ctx) error {
 		// uri 확인용.
+		// shellInjections := []string{"&", "&&", "|", "||", ";", "0x0a", "\n", "$", "`", "'", `"`}
 		fmt.Printf("%s\n", c.Request().URI())
-		dataMap := make(map[string]interface{})
-		err := json.Unmarshal(c.Body(), &dataMap)
-		if err == nil {
-			shellInjections := []string{"&", "&&", "|", "||", ";", "0x0a", "\n", "$", "`", "'", `"`}
-			for _, value := range dataMap {
-				switch value.(type) {
-				case string:
-					// fmt.Printf("will be checked %v\n", value)
-				default:
-					// fmt.Printf("passed %v\n", value)
-					continue
-				}
-				for _, injection := range shellInjections {
-					if strings.Contains(value.(string), injection) {
-						return c.Status(http.StatusConflict).JSON(fiber.Map{
-							"code": http.StatusConflict,
-							"err":  fmt.Sprintf("chracter(=%v) can be a command injection(=%v)", injection, value),
-						})
-					}
-				}
-			}
-		}
+		// dataMap := make(map[string]interface{})
+		// json.Unmarshal(c.Body(), &dataMap)
+
+		// if util.IsAlreadyShorten(dataMap["uri"].(string)) == true {
+		// 	fmt.Printf("already short-uri %v\n", dataMap["uri"].(string))
+		// 	return c.Next()
+		// }
+		// if shortenUrl, err := util.ShortenUrl(dataMap["uri"].(string)); err != nil {
+		// 	return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+		// 		"code":        http.StatusInternalServerError,
+		// 		"description": err,
+		// 	})
+		// } else {
+		// 	fmt.Printf("origin %v\n", dataMap["uri"])
+		// 	dataMap["uri"] = shortenUrl
+		// }
+		// fmt.Printf("shorten %v\n", dataMap["uri"])
+
 		return c.Next()
 	})
+
+	videosInfo := v1.Group("/meta")
+	videosInfo.Use(metadata.ValidationRouter)
+	videosInfo.Post("", metadata.GetMetaData)
 
 	videos := v1.Group("/media")
 	videos.Post("", media.GetMedia)
@@ -69,10 +67,10 @@ func Create() *fiber.App {
 	videos.Get("/:uuid<guid>", media.GetMediaStatus)
 	videos.Delete("/:uuid<guid>", media.StopTask)
 
-	videosInfo := v1.Group("/meta")
-	videosInfo.Use(metadata.ValidationRouter)
-	videosInfo.Post("", metadata.GetMetaData)
+	// pwd, _ := os.Getwd()
+	//8443
+	// app.ListenTLS(":8443", fmt.Sprintf("%v/cert.pem", pwd), fmt.Sprintf("%v/cert.key", pwd))
+	app.Listen(":8443")
 
-	app.Listen(":8080")
 	return app
 }
